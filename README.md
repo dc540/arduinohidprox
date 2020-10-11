@@ -18,5 +18,6 @@ As I said, I'm using a ProxPro reader, but it seems like as long as they support
 Weigand data over the standard DATA0 and DATA1 outputs, they'll probably work.
 
 Tie DATA0 to PIN2, and DATA1 to PIN3, and let her rip.  Debugging data available
-in serial monitor. Will be adding basic display configuration back in as time
-permits.
+in serial monitor. User feedback provided via 128x64 monochrome SSD_1306 display.
+Adapt to your own display if you have something different. First draft was using
+a QAPASS 1602 LCD.
