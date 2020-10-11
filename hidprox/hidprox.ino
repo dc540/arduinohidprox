@@ -318,7 +318,10 @@ void printBits()
       Serial.print(facilityCode);
       Serial.print(", CC = ");
       Serial.println(cardCode); 
-      if ((facilityCode == 96) && (cardCode == 47935)) 
+      // this comparison is just a sample tag i own
+      // the next step is to actually compare it to real data
+      // TBD
+      if ((facilityCode == 43) && (cardCode == 22847)) 
       {
         drawaccepted();
       } else
