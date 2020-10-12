@@ -36,3 +36,21 @@ is likely to burn out your board.
 
 So I was able to make changes while it was still powered by the 12V and powering
 the reader.
+
+Wiring:
+
+Reader     | Arduino
+-----------|--------
+DATA0      | 2
+DATA1      | 3
+LED_RED    | 10
+LED_GREEN  | 11
+DC +       | VIN
+DC -       | GND (any)
+
+SSD_1306   | Arduino
+-----------+--------
+GND        | GND
+VCC        | 5V
+SCL        | A5
+SDA        | A4
