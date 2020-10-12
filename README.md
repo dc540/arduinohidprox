@@ -4,7 +4,9 @@ Interfacing an Arduino with a HID ProxPro 5355AGK00 (and likely others)
 I acquired a HID ProxPro reader, and was interested in using it with Arduino. 
 
 I chose the Arduino UNO, because it can be powered with 12V via the power jack, 
-and I believe it can externally power the reader via its VIN pin.
+and I it can externally power the reader via its VIN pin. Not all models can do
+this -- I believe some of the ESP models prevent outward power flow on the VIN
+pins. But for the UNO, it's fine.
 
 I found several sources online for interfacing the RFID readers with Arduino. I
 settled on Daniel Smith's project from 2012 on Pagemac.com, because it's the most
@@ -18,6 +20,19 @@ As I said, I'm using a ProxPro reader, but it seems like as long as they support
 Weigand data over the standard DATA0 and DATA1 outputs, they'll probably work.
 
 Tie DATA0 to PIN2, and DATA1 to PIN3, and let her rip.  Debugging data available
-in serial monitor. User feedback provided via 128x64 monochrome SSD_1306 display.
-Adapt to your own display if you have something different. First draft was using
-a QAPASS 1602 LCD.
+in serial monitor. Will be adding basic display configuration back in as time
+permits.
+
+NOTE: If you can't get the green LED to fire, it probably means you are
+powering the reader independently from the Arduino and forgot to connect a
+ground line from between them. If you're powering it from the Arduino you will
+have a ground line.
+
+The good news is that you can connect via USB while the power is still attached
+to the DC jack on the board. I wouldn't try it if you're powering by the pins. My
+understanding is that there is circuitry to protect the board if you power it via
+the DC jack, but not by the pins.  So powering by the USB and the pins simultaneously
+is likely to burn out your board.
+
+So I was able to make changes while it was still powered by the 12V and powering
+the reader.
