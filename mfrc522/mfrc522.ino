@@ -1,16 +1,18 @@
 /*
- * HID RFID Wiegand Interface for Arduino Uno
- * Originally Written by Daniel Smith, 2012.01.30
- * Modified by @dc540_nova, 2020-10-10 
- *
- * Daniel's original work was apparently based on a 5V reader. I used a 12V reader, which changes
- * some of the elctrical requirements. Everything else works the same.
-*/
+ * 
+ * All the resources for this project: https://randomnerdtutorials.com/
+ * Modified by Rui Santos
+ * 
+ * Created by FILIPEFLOP
+ * 
+ */
  
 #include <SPI.h>
+#include <MFRC522.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <string.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -18,24 +20,8 @@
 // Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
 #define OLED_RESET     4 // Reset pin # (or -1 if sharing Arduino reset pin)
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
- 
-#define MAX_BITS 100                 // max number of bits 
-#define WEIGAND_WAIT_TIME  3000      // time to wait for another weigand pulse.  
- 
-unsigned char databits[MAX_BITS];    // stores all of the data bits
-unsigned char bitCount;              // number of bits currently captured
-unsigned char flagDone;              // goes low when data is currently being captured
-unsigned int weigand_counter;        // countdown until we assume there are no more bits
- 
-unsigned long facilityCode=0;        // decoded facility code
-unsigned long cardCode=0;            // decoded card code
-unsigned long keyPress=0;
-char userName[10] = "          ";
-int LED_GREEN = 11;
-int LED_RED = 10;
-
-#define LOGO_HEIGHT   64
-#define LOGO_WIDTH    128
+#define LOGO_HEIGHT 64
+#define LOGO_WIDTH 128 
 static const unsigned char PROGMEM logo_bmp[] =
 { 
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
@@ -102,49 +88,18 @@ static const unsigned char PROGMEM logo_bmp[] =
   0x00,0x00,0x03,0xff,0xff,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
   0x00,0x00,0x00,0x1f,0xe0,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
- };
+};
 
-// interrupt that happens when INTO goes low (0 bit)
-void ISR_INT0()
+#define SS_PIN 10
+#define RST_PIN 9
+MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
+String content = "";
+String myUsername = "";
+
+void drawAccepted()
 {
-  //Serial.print("0");   // uncomment this line to display raw binary
-  bitCount++;
-  flagDone = 0;
-  weigand_counter = WEIGAND_WAIT_TIME;  
- 
-}
- 
-// interrupt that happens when INT1 goes low (1 bit)
-void ISR_INT1()
-{
-  //Serial.print("1");   // uncomment this line to display raw binary
-  databits[bitCount] = 1;
-  bitCount++;
-  flagDone = 0;
-  weigand_counter = WEIGAND_WAIT_TIME;  
-}
-
-void showKeyPress(void) {
-  Serial.println("Show keyPress");
-  display.clearDisplay();
-  display.ssd1306_command(SSD1306_DISPLAYON);
-  display.setCursor(0,0);
-  display.setTextSize(4);
-  display.setTextColor(SSD1306_WHITE);
-  display.print(keyPress);
-  display.display();
-  digitalWrite(LED_GREEN, LOW);
-  delay(500);
-  digitalWrite(LED_GREEN, HIGH);
-  display.ssd1306_command(SSD1306_DISPLAYOFF);
-}
-
-void drawaccepted(void) {
   Serial.print("Accepted\n");
-  Serial.print("FC: ");
-  Serial.print(facilityCode);
-  Serial.print("\nCC: ");
-  Serial.print(cardCode);
+  Serial.print(content);
   display.ssd1306_command(SSD1306_DISPLAYON);
   display.clearDisplay();
   display.setCursor(0,0);             // Start at top-left corner
@@ -152,192 +107,93 @@ void drawaccepted(void) {
   display.setTextColor(SSD1306_WHITE);
   display.println(F("Accepted:"));
   display.setTextSize(1);
-  display.print(F("FC: "));
-  display.println(facilityCode);
-  display.print(F("CC: "));
-  display.println(cardCode);
+  display.println(content);
   display.setTextSize(2);
   display.println(F("Welcome"));
-  display.println("Bob");
+  display.println(myUsername);
   display.display();
-  digitalWrite(LED_GREEN, LOW);
-  delay(500);
-  digitalWrite(LED_GREEN, HIGH);
-  delay(1000);
+  delay(2000);
   Serial.println(F("Placing display into sleep mode..."));
   display.ssd1306_command(SSD1306_DISPLAYOFF);
 }
 
-void drawunknown(void) {
-  Serial.println("Unknown");
-  Serial.print("FC: ");
-  Serial.println(facilityCode);
-  Serial.print("CC: ");
-  Serial.println(cardCode);
+void drawDenied()
+{
+  Serial.print("Unknown\n");
+  Serial.print(content);
   display.ssd1306_command(SSD1306_DISPLAYON);
   display.clearDisplay();
   display.setCursor(0,0);             // Start at top-left corner
   display.setTextSize(2);             // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
-  display.println(F("UNKNOWN:"));
+  display.println(F("Accepted:"));
   display.setTextSize(1);
-  display.print(F("FC: "));
-  display.println(facilityCode);
-  display.print(F("CC: "));
-  display.println(cardCode);
+  display.println(content);
   display.setTextSize(2);
-  display.println(F("DENIED"));
+  display.println(F("Denied"));
   display.display();
-  digitalWrite(LED_RED, LOW);
-  delay(500);
-  digitalWrite(LED_RED, HIGH);
-  delay(1000);
+  delay(2000);
   Serial.println(F("Placing display into sleep mode..."));
   display.ssd1306_command(SSD1306_DISPLAYOFF);
-  delay(5000);
 }
 
-void setup()
+void setup() 
 {
-  Serial.begin(9600);
-  Serial.println("Entering setup...");
-  pinMode(LED_RED, OUTPUT);  // LED
-  pinMode(LED_GREEN, OUTPUT);  // LED
-  digitalWrite(LED_RED, HIGH); // High = Off
-  digitalWrite(LED_GREEN, HIGH);  // Low = On
-
-  pinMode(2, INPUT_PULLUP);     // DATA0 (INT0)
-  pinMode(3, INPUT_PULLUP);     // DATA1 (INT1)
- 
-  Serial.println("\n\nRFID Readers");
- 
-  // binds the ISR functions to the falling edge of INTO and INT1
-  attachInterrupt(0, ISR_INT0, FALLING);  
-  attachInterrupt(1, ISR_INT1, FALLING);
- 
-  weigand_counter = WEIGAND_WAIT_TIME;
-
-  // SSD1306_SWITCHCAPVCC = generate display voltage from 3.3V internally
-  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { // Address 0x3D for 128x64
-    Serial.println(F("SSD1306 allocation failed"));
-    for(;;); // Don't proceed, loop forever
-  }
+  Serial.begin(9600);   // Initiate a serial communication
+  SPI.begin();      // Initiate  SPI bus
+  mfrc522.PCD_Init();   // Initiate MFRC522
   // display DC540 Splash screen
-    Serial.println("ShowSplashScreen");
+  Serial.print("Splash\n");
   display.clearDisplay();
-  display.drawBitmap(
-    (display.width()  - LOGO_WIDTH ) / 2,
-    (display.height() - LOGO_HEIGHT) / 2,
-    logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+  //display.drawBitmap(
+  //  (display.width()  - LOGO_WIDTH ) / 2,
+  //  (display.height() - LOGO_HEIGHT) / 2,
+  //  logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
   display.display();
   Serial.print("Splash screen complete...\n");
   delay(2000);
   display.clearDisplay();
   display.ssd1306_command(SSD1306_DISPLAYOFF);
-  Serial.print("Leaving setup\n");
+  Serial.print("Approximate your card to the reader...\n");
 }
- 
-void loop()
+void loop() 
 {
-  // Serial.print(".");\
-  // This waits to make sure that there have been no more data pulses before processing data
-  if (!flagDone) {
-    if (--weigand_counter == 0)
-      flagDone = 1;  
+  // Look for new cards
+  if ( ! mfrc522.PICC_IsNewCardPresent()) 
+  {
+    return;
   }
- 
-  // if we have bits and we the weigand counter went out
-  if (bitCount > 0 && flagDone) {
-    unsigned char i;
- 
-    Serial.print("Read ");
-    Serial.print(bitCount);
-    Serial.println(" bits");
- 
-    // we will decode the bits differently depending on how many bits we have
-    // see www.pagemac.com/azure/data_formats.php for mor info
-    if (bitCount == 4)
-    {
-      // keypad pressed
-      for (i=0; i<4; i++)
-      {
-        keyPress <<=1;
-        keyPress |= databits[i];
-      }
-      showKeyPress();
-    }
-    if (bitCount == 34)
-    {
-      // 35 bit HID Corporate 1000 format
-      // facility code = bits 2 to 14
-      for (i=2; i<17; i++)
-      {
-         facilityCode <<=1;
-         facilityCode |= databits[i];
-      }
- 
-      // card code = bits 15 to 34
-      for (i=14; i<33; i++)
-      {
-         cardCode <<=1;
-         cardCode |= databits[i];
-      }
- 
-      printBits();
-    }
-    else if (bitCount == 26)
-    {
-      // standard 26 bit format
-      // facility code = bits 2 to 9
-      for (i=1; i<9; i++)
-      {
-         facilityCode <<=1;
-         facilityCode |= databits[i];
-      }
- 
-      // card code = bits 10 to 23
-      for (i=9; i<25; i++)
-      {
-         cardCode <<=1;
-         cardCode |= databits[i];
-      }
- 
-      printBits();  
-    }
-    else if (bitCount == 37)
-    {
-      facilityCode = 0;
-      cardCode = 0;
-      printBits();
-      // you can add other formats if you want!
-      // Serial.println("Unable to decode."); 
-    }
- 
-     // cleanup and get ready for the next card
-     bitCount = 0;
-     facilityCode = 0;
-     cardCode = 0;
-     keyPress = 0;
-     for (i=0; i<MAX_BITS; i++) 
-     {
-       databits[i] = 0;
-     }
+  // Select one of the cards
+  if ( ! mfrc522.PICC_ReadCardSerial()) 
+  {
+    return;
   }
-}
- 
-void printBits()
-{
-      // I really hope you can figure out what this function does
-      Serial.print("FC = ");
-      Serial.print(facilityCode);
-      Serial.print(", CC = ");
-      Serial.println(cardCode); 
-      // this comparison is just a sample tag i own
-      // the next step is to actually compare it to real data
-      // TBD
-      if ((facilityCode == 22) && (cardCode == 12321)) 
-      {
-        drawaccepted();
-      } else
-        drawunknown();
-}
+  //Show UID on serial monitor
+  Serial.print("UID tag :");
+  byte letter;
+  for (byte i = 0; i < mfrc522.uid.size; i++) 
+  {
+     Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
+     Serial.print(mfrc522.uid.uidByte[i], HEX);
+     content.concat(String(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " "));
+     content.concat(String(mfrc522.uid.uidByte[i], HEX));
+  }
+  Serial.println();
+  Serial.print("Message : ");
+  content.toUpperCase();
+  if (content.substring(1) == "56 E0 DD B3") //change here the UID of the card/cards that you want to give access
+  {
+    Serial.print("Authorized access\n");
+    myUsername="dc540baab";
+    Serial.print("\n");
+    drawAccepted();
+    delay(3000);
+    content="          ";
+  }
+  else   {
+    Serial.print(" Access denied\n");
+    drawDenied();
+    delay(3000);
+    content="          ";
+  }
+} 
