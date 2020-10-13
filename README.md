@@ -54,3 +54,9 @@ GND        | GND
 VCC        | 5V
 SCL        | A5
 SDA        | A4
+
+MFRC522:
+
+I happened to have a MFRC522 RFID module leftover from a Hackerbox from a year
+or two ago, so I decided to port this functionality to that as well.  It's a work
+in progress, and I will update when it's fully working.  
