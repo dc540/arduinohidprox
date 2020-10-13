@@ -8,11 +8,9 @@
  */
  
 #include <SPI.h>
-#include <MFRC522.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
-#include <string.h>
 
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
@@ -90,6 +88,8 @@ static const unsigned char PROGMEM logo_bmp[] =
   0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 };
 
+#include <MFRC522.h>
+#include <string.h>
 #define SS_PIN 10
 #define RST_PIN 9
 MFRC522 mfrc522(SS_PIN, RST_PIN);   // Create MFRC522 instance.
@@ -115,6 +115,7 @@ void drawAccepted()
   delay(2000);
   Serial.println(F("Placing display into sleep mode..."));
   display.ssd1306_command(SSD1306_DISPLAYOFF);
+  content="";
 }
 
 void drawDenied()
@@ -126,7 +127,7 @@ void drawDenied()
   display.setCursor(0,0);             // Start at top-left corner
   display.setTextSize(2);             // Draw 2X-scale text
   display.setTextColor(SSD1306_WHITE);
-  display.println(F("Accepted:"));
+  display.println(F("Unknown:"));
   display.setTextSize(1);
   display.println(content);
   display.setTextSize(2);
@@ -135,20 +136,27 @@ void drawDenied()
   delay(2000);
   Serial.println(F("Placing display into sleep mode..."));
   display.ssd1306_command(SSD1306_DISPLAYOFF);
+  content="";
 }
 
 void setup() 
 {
   Serial.begin(9600);   // Initiate a serial communication
+  Serial.print("Begin setup...\n");
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); //loop forever
+  }
   SPI.begin();      // Initiate  SPI bus
   mfrc522.PCD_Init();   // Initiate MFRC522
   // display DC540 Splash screen
-  Serial.print("Splash\n");
   display.clearDisplay();
-  //display.drawBitmap(
-  //  (display.width()  - LOGO_WIDTH ) / 2,
-  //  (display.height() - LOGO_HEIGHT) / 2,
-  //  logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
+  display.setCursor(0,0);
+  display.drawBitmap(
+    //0,0,logo_bmp,127,63,1);
+    (display.width()  - LOGO_WIDTH ) / 2,
+    (display.height() - LOGO_HEIGHT) / 2,
+    logo_bmp, LOGO_WIDTH, LOGO_HEIGHT, 1);
   display.display();
   Serial.print("Splash screen complete...\n");
   delay(2000);
@@ -181,19 +189,19 @@ void loop()
   Serial.println();
   Serial.print("Message : ");
   content.toUpperCase();
-  if (content.substring(1) == "56 E0 DD B3") //change here the UID of the card/cards that you want to give access
+  if (content.substring(1) == "BD EF 52 3C") //change here the UID of the card/cards that you want to give access
   {
     Serial.print("Authorized access\n");
     myUsername="dc540baab";
     Serial.print("\n");
     drawAccepted();
     delay(3000);
-    content="          ";
+    content="";
   }
   else   {
     Serial.print(" Access denied\n");
     drawDenied();
     delay(3000);
-    content="          ";
+    content="";
   }
 } 
