@@ -1,4 +1,3 @@
-# arduinohidprox
 Interfacing an Arduino with a HID ProxPro 5355AGK00 (and likely others)
 
 I acquired a HID ProxPro reader, and was interested in using it with Arduino. 
@@ -57,9 +56,10 @@ SDA        | A4
 
 MFRC522:
 
-I happened to have a MFRC522 RFID module leftover from a Hackerbox from a year
-or two ago, so I decided to port this functionality to that as well.  It's a work
-in progress, and I will update when it's fully working. 
+I happened to have a MFRC522 RFID module that came with my CrowPi a year or
+two ago, so I decided to port this functionality to that as well.  Turns out
+it works just as well as the commercial readers, except you'd have to add your
+own feedback LED and/or audio.
 
 RFID-RC522 Wiring:
 
