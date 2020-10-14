@@ -70,3 +70,5 @@ SDA        | 10
 MOSI       | 11
 MISO       | 12
 SCK        | 13
+VCC        | 3.3V
+GND        | GND
