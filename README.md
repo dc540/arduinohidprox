@@ -38,8 +38,8 @@ the reader.
 
 Wiring:
 
-Reader     | Arduino
------------|--------
+Reader     | Color | Arduino
+-----------|-------|-----------
 DATA0      | GREEN | 2
 DATA1      | WHITE | 3
 LED_RED    | BROWN | 10
