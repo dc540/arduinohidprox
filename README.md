@@ -40,17 +40,17 @@ Wiring:
 
 Reader     | Arduino
 -----------|--------
-DATA0      | 2
-DATA1      | 3
-LED_RED    | 10
-LED_GREEN  | 11
-DC +       | VIN
-DC -       | GND (any)
+DATA0      | GREEN | 2
+DATA1      | WHITE | 3
+LED_RED    | BROWN | 10
+LED_GREEN  | ORANG | 11
+DC +       | RED   | VIN
+DC -       | BLK   | GND (any)
 
 SSD_1306   | Arduino
 -----------+--------
 GND        | GND
-VCC        | 5V
+VCC        | 5V 
 SCL        | A5
 SDA        | A4
 
